@@ -1,18 +1,16 @@
 const express = require("express")
 const router = express.Router()
 
-// /trips
 router.get("/", (req, res) => {
-    console.log(req.session.username)
-    let personalTrips = allTrips.filter(item => item.username == req.session.username)
-    console.log(personalTrips)
-    res.render("trips", { listOfAllTrips: personalTrips })
+    const personalTrips = allTrips.filter(item => item.username === req.session.username)
+    res.render("trips", { listOfTrips: personalTrips })
 })
 
-router.post("/", (req, res) => {
-    console.log(allTrips)
-    res.render("trips")
-})
-
-
+function createTrip(req, res) {
+    const { title, image, departureDate, returnDate } = req.body
+    allTrips.push({ title, image, departureDate, returnDate, username: req.session.username })
+    res.redirect("/trips")
+}
+router.post("/", createTrip)
+router.createTrip = createTrip
 module.exports = router

@@ -20,18 +20,8 @@ app.use(session({
 app.use("/trips", authenticate, tripRouter)
 
 function authenticate(req, res, next) {
-    if (req.session) {
-        if(req.session.isAuthenticated){
-            console.log("AUTHENTICATED")
-            console.log(req.session.username)
-            next()
-        } else {
-            console.log("not authenticated")
-            res.redirect("login")
-        }
-    } else {
-        console.log("not authenticated")
-    }
+    if (req.session && req.session.isAuthenticated) return next()
+    return res.redirect("/login")
 }
 
 // END MIDDLEWARE
@@ -40,28 +30,8 @@ app.get("/", (req, res) => {
     res.render("index")
 })
 
-app.post("/index", (req, res) => {
-    console.log("post fired")
-    let title = req.body.title
-    let image = req.body.image
-    let departureDate = req.body.departureDate
-    let returnDate = req.body.returnDate
-    
-    req.body.username = currentUser
-
-    let trip = {
-        title: title,
-        image: image,
-        departureDate: departureDate,
-        returnDate: returnDate,
-        username: user
-    }
-    console.log(trip + "trip")
-    
-    allTrips.push(trip)
-
-    res.redirect("/trips")
-})
+// Keep the original endpoint working; both forms use the same session-owned creation.
+app.post("/index", authenticate, tripRouter.createTrip)
 
 app.get("/register", (req, res)=>{
     res.render("register")
@@ -73,9 +43,9 @@ app.post("/register", (req, res)=>{
 
     if (users.some(u => u.username == username) === false){
         users.push({username: username, password: password})
-        res.redirect("login")
+        res.redirect("/login")
     } else {
-        console.log("A user already has thtat username")
+        res.status(409).render("register", { error: "That username is already registered." })
     }
 })
 
@@ -90,12 +60,11 @@ app.post("/login", (req, res)=>{
     let tempUser = users.find(u => {
         return (u.username == username && u.password == password)
     })
-    console.log(tempUser)
 
     if (tempUser) {
         if (req.session) {
             req.session.isAuthenticated = true
-            req.session.username = tempUser
+            req.session.username = tempUser.username
             res.redirect("/")
         } else {
             console.log("invalid login")
@@ -114,6 +83,9 @@ app.set("views", "./views")
 // extension will be .mustache
 app.set("view engine", "mustache")
 
-app.listen(3000, () => {
-    console.log("Server is running on http://localhost:3000")
-})
+if (require.main === module) {
+    app.listen(process.env.PORT || 3000, () => {
+        console.log("Trip server started")
+    })
+}
+module.exports = app
